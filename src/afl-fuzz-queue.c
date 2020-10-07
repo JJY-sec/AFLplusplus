@@ -30,14 +30,14 @@
 inline u32 select_next_queue_entry(afl_state_t *afl) {
 
   u32 r = rand_below(afl, 0xffffffff);
-  u32 s = r % afl->active_paths;
+  u32 s = r % afl->queued_paths;
   return (r < afl->alias_probability[s] ? s : afl->alias_table[s]);
 
 }
 
 void create_alias_table(afl_state_t *afl) {
 
-  u32 n = afl->active_paths, i = 0, a, g;
+  u32 n = afl->queued_paths, i = 0, a, g;
 
   afl->alias_table =
       (u32 *)afl_realloc((void **)&afl->alias_table, n * sizeof(u32));
@@ -50,11 +50,14 @@ void create_alias_table(afl_state_t *afl) {
 
   double sum = 0;
 
-  struct queue_entry *q = afl->queue;
+  for (i = 0; i < n; i++) {
 
-  while (q) {
+    struct queue_entry *q = afl->queue_buf[i];
 
-    q->perf_score = calculate_score(afl, q);
+    if (!q->disabled)
+      q->perf_score = calculate_score(afl, q);
+    else
+      q->perf_score = 0; // FIXME do that once only
     sum += q->perf_score;
     P[i++] = q->perf_score * n / sum;
     q = q->next;

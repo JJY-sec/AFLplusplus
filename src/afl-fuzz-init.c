@@ -959,6 +959,7 @@ void perform_dry_run(afl_state_t *afl) {
         /* Remove from fuzzing queue but keep for splicing */
 
         struct queue_entry *p = afl->queue;
+        p->disabled = 1;
         while (p && p->next != q)
           p = p->next;
 
@@ -968,6 +969,7 @@ void perform_dry_run(afl_state_t *afl) {
           afl->queue = q->next;
 
         --afl->pending_not_fuzzed;
+        --afl->active_paths;
 
         afl->max_depth = 0;
         p = afl->queue;
@@ -1064,11 +1066,13 @@ restart_outer_cull_loop:
         // we keep the shorter file
         if (p->len >= q->len) {
 
+          p->disabled = 1;
           q->next = p->next;
           goto restart_inner_cull_loop;
 
         } else {
 
+          q->disabled = 1;
           if (prev)
             prev->next = q = p;
           else

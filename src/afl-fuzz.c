@@ -1462,15 +1462,16 @@ int main(int argc, char **argv_orig, char **envp) {
     // select the next queue entry to fuzz
     ++runs_in_current_cycle;
     afl->current_entry = select_next_queue_entry(afl);
+    if (debug) fprintf(stderr, "Selected entry %u of %u\n", afl->current_entry, afl->queued_paths);
     afl->queue_cur = afl->queue_buf[afl->current_entry];
 
     // and fuzz it
-    u32 prev_active_paths = afl->active_paths;
+    u32 prev_queued_paths = afl->queued_paths;
     skipped_fuzz = fuzz_one(afl);
 
     if (!skipped_fuzz) {
 
-      if (prev_active_paths < afl->active_paths) create_alias_table(afl);
+      if (prev_queued_paths < afl->queued_paths) create_alias_table(afl);
 
       if (!afl->stop_soon && afl->sync_id) {
 
