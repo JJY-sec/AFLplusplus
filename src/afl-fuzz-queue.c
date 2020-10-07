@@ -44,9 +44,13 @@ void create_alias_table(afl_state_t *afl) {
   afl->alias_probability = (double *)afl_realloc(
       (void **)&afl->alias_probability, n * sizeof(double));
   double *P = (double *)afl_realloc(AFL_BUF_PARAM(out), n * sizeof(double));
-  ;
   int *S = (u32 *)afl_realloc(AFL_BUF_PARAM(out_scratch), n * sizeof(u32));
   int *L = (u32 *)afl_realloc(AFL_BUF_PARAM(in_scratch), n * sizeof(u32));
+
+  if (!P || !S || !L) FATAL("could not aquire memory for alias table");
+  memset((void*)P, 0, n * sizeof(double));
+  memset((void*)S, 0, n * sizeof(u32));
+  memset((void*)L, 0, n * sizeof(u32));
 
   double sum = 0;
 
@@ -58,9 +62,11 @@ void create_alias_table(afl_state_t *afl) {
       q->perf_score = calculate_score(afl, q);
     else
       q->perf_score = 0; // FIXME do that once only
+
+    if (afl->debug) fprintf(stderr, "entry %u: score=%f %s\n", i, q->perf_score, q->disabled ? "disabled" : "");
+
     sum += q->perf_score;
-    P[i++] = q->perf_score * n / sum;
-    q = q->next;
+    P[i] = q->perf_score * n / sum;
 
   }
 
