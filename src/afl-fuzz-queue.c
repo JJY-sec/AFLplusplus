@@ -31,6 +31,8 @@ inline u32 select_next_queue_entry(afl_state_t *afl) {
 
   u32 r = rand_below(afl, 0xffffffff);
   u32 s = r % afl->queued_paths;
+  // fprintf(stderr, "select: r=%u s=%u ... r < prob[s] = %f ? s=%u :
+  // alias[s]=%u\n", r, s, afl->alias_probability[s], s, afl->alias_table[s]);
   return (r < afl->alias_probability[s] ? s : afl->alias_table[s]);
 
 }
@@ -44,13 +46,15 @@ void create_alias_table(afl_state_t *afl) {
   afl->alias_probability = (double *)afl_realloc(
       (void **)&afl->alias_probability, n * sizeof(double));
   double *P = (double *)afl_realloc(AFL_BUF_PARAM(out), n * sizeof(double));
-  int *S = (u32 *)afl_realloc(AFL_BUF_PARAM(out_scratch), n * sizeof(u32));
-  int *L = (u32 *)afl_realloc(AFL_BUF_PARAM(in_scratch), n * sizeof(u32));
+  int *   S = (u32 *)afl_realloc(AFL_BUF_PARAM(out_scratch), n * sizeof(u32));
+  int *   L = (u32 *)afl_realloc(AFL_BUF_PARAM(in_scratch), n * sizeof(u32));
 
   if (!P || !S || !L) FATAL("could not aquire memory for alias table");
-  memset((void*)P, 0, n * sizeof(double));
-  memset((void*)S, 0, n * sizeof(u32));
-  memset((void*)L, 0, n * sizeof(u32));
+  memset((void *)P, 0, n * sizeof(double));
+  memset((void *)S, 0, n * sizeof(u32));
+  memset((void *)L, 0, n * sizeof(u32));
+  memset((void *)afl->alias_table, 0, n * sizeof(u32));
+  memset((void *)afl->alias_probability, 0, n * sizeof(double));
 
   double sum = 0;
 
@@ -61,22 +65,30 @@ void create_alias_table(afl_state_t *afl) {
     if (!q->disabled)
       q->perf_score = calculate_score(afl, q);
     else
-      q->perf_score = 0; // FIXME do that once only
-
-    if (afl->debug) fprintf(stderr, "entry %u: score=%f %s\n", i, q->perf_score, q->disabled ? "disabled" : "");
+      q->perf_score = 0;  // FIXME do that once only
 
     sum += q->perf_score;
+    if (afl->debug)
+      fprintf(stderr, "entry %u: score=%f %s (sum: %f)\n", i, q->perf_score,
+              q->disabled ? "disabled" : "", sum);
+
+  }
+
+  for (i = 0; i < n; i++) {
+
+    struct queue_entry *q = afl->queue_buf[i];
+
     P[i] = q->perf_score * n / sum;
 
   }
 
   int nS = 0, nL = 0, s;
-  for (s = n - 1; s >= 0; --s) {
+  for (s = (s32)n - 1; s >= 0; --s) {
 
     if (P[s] < 1)
-      S[nS++] = i;
+      S[nS++] = s;
     else
-      L[nL++] = i;
+      L[nL++] = s;
 
   }
 
@@ -104,8 +116,8 @@ void create_alias_table(afl_state_t *afl) {
 
     fprintf(stderr, "  %-3s  %-3s  %-9s\n", "entry", "alias", "prob");
     for (u32 i = 0; i < n; ++i)
-      printf("  %3i  %3i  %9.7f\n", i, afl->alias_table[i],
-             afl->alias_probability[i]);
+      fprintf(stderr, "  %3i  %3i  %9.7f\n", i, afl->alias_table[i],
+              afl->alias_probability[i]);
 
   }
 

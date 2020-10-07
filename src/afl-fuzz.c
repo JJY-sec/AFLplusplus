@@ -1466,12 +1466,14 @@ int main(int argc, char **argv_orig, char **envp) {
       afl->current_entry = select_next_queue_entry(afl);
 
     } else {
-    
+
       afl->current_entry = 0;
-    
+
     }
 
-    if (debug) fprintf(stderr, "Selected entry %u of %u\n", afl->current_entry, afl->queued_paths);
+    if (debug)
+      fprintf(stderr, "Selected entry %u of %u\n", afl->current_entry,
+              afl->queued_paths);
     afl->queue_cur = afl->queue_buf[afl->current_entry];
 
     // and fuzz it
