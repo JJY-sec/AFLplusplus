@@ -27,6 +27,81 @@
 #include <ctype.h>
 #include <math.h>
 
+inline u32 select_next_queue_entry(afl_state_t *afl) {
+
+  u32 r = rand_below(afl, 0xffffffff);
+  u32 s = r % afl->active_paths;
+  return (r < afl->alias_probability[s] ? s : afl->alias_table[s]);
+
+}
+
+void create_alias_table(afl_state_t *afl) {
+
+  u32 n = afl->active_paths, i = 0, a, g;
+
+  afl->alias_table =
+      (u32 *)afl_realloc((void **)&afl->alias_table, n * sizeof(u32));
+  afl->alias_probability = (double *)afl_realloc(
+      (void **)&afl->alias_probability, n * sizeof(double));
+  double *P = (double *)afl_realloc(AFL_BUF_PARAM(out), n * sizeof(double));
+  ;
+  int *S = (u32 *)afl_realloc(AFL_BUF_PARAM(out_scratch), n * sizeof(u32));
+  int *L = (u32 *)afl_realloc(AFL_BUF_PARAM(in_scratch), n * sizeof(u32));
+
+  double sum = 0;
+
+  struct queue_entry *q = afl->queue;
+
+  while (q) {
+
+    q->perf_score = calculate_score(afl, q);
+    sum += q->perf_score;
+    P[i++] = q->perf_score * n / sum;
+    q = q->next;
+
+  }
+
+  int nS = 0, nL = 0, s;
+  for (s = n - 1; s >= 0; --s) {
+
+    if (P[s] < 1)
+      S[nS++] = i;
+    else
+      L[nL++] = i;
+
+  }
+
+  while (nS && nL) {
+
+    a = S[--nS];
+    g = L[--nL];
+    afl->alias_probability[a] = P[a];
+    afl->alias_table[a] = g;
+    P[g] = P[g] + P[a] - 1;
+    if (P[g] < 1)
+      S[nS++] = g;
+    else
+      L[nL++] = g;
+
+  }
+
+  while (nL)
+    afl->alias_probability[L[--nL]] = 1;
+
+  while (nS)
+    afl->alias_probability[S[--nS]] = 1;
+
+  if (afl->debug) {
+
+    fprintf(stderr, "  %-3s  %-3s  %-9s\n", "entry", "alias", "prob");
+    for (u32 i = 0; i < n; ++i)
+      printf("  %3i  %3i  %9.7f\n", i, afl->alias_table[i],
+             afl->alias_probability[i]);
+
+  }
+
+}
+
 /* Mark deterministic checks as done for a particular queue entry. We use the
    .state file to avoid repeating deterministic fuzzing when resuming aborted
    scans. */
@@ -237,6 +312,7 @@ void add_to_queue(afl_state_t *afl, u8 *fname, u32 len, u8 passed_det) {
   if (likely(q->len > 4)) afl->ready_for_splicing_count++;
 
   ++afl->queued_paths;
+  ++afl->active_paths;
   ++afl->pending_not_fuzzed;
 
   afl->cycles_wo_finds = 0;

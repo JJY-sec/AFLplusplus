@@ -162,6 +162,8 @@ struct queue_entry {
   u8 *trace_mini;                       /* Trace bytes, if kept             */
   u32 tc_ref;                           /* Trace bytes ref count            */
 
+  double perf_score;                    /* performance score                */
+
   struct queue_entry *next;             /* Next element, if any             */
 
 };
@@ -489,6 +491,10 @@ typedef struct afl_state {
   u8 *virgin_bits,                      /* Regions yet untouched by fuzzing */
       *virgin_tmout,                    /* Bits we haven't seen in tmouts   */
       *virgin_crash;                    /* Bits we haven't seen in crashes  */
+
+  double *alias_probability;            /* alias weighted probabilities     */
+  u32 *   alias_table;                /* alias weighted random lookup table */
+  u32     active_paths;                 /* enabled entries in the queue     */
 
   u8 *var_bytes;                        /* Bytes that appear to be variable */
 
@@ -988,6 +994,8 @@ void   find_timeout(afl_state_t *);
 double get_runnable_processes(void);
 void   nuke_resume_dir(afl_state_t *);
 int    check_main_node_exists(afl_state_t *);
+u32    select_next_queue_entry(afl_state_t *afl);
+void   create_alias_table(afl_state_t *afl);
 void   setup_dirs_fds(afl_state_t *);
 void   setup_cmdline_file(afl_state_t *, char **);
 void   setup_stdio_file(afl_state_t *);

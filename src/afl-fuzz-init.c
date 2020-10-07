@@ -1054,6 +1054,7 @@ restart_outer_cull_loop:
 
         duplicates = 1;
         --afl->pending_not_fuzzed;
+        afl->active_paths--;
 
         // We do not remove any of the memory allocated because for
         // splicing the data might still be interesting.

@@ -244,7 +244,7 @@ int main(int argc, char **argv_orig, char **envp) {
 
   s32 opt, i;
   u64 prev_queued = 0;
-  u32 sync_interval_cnt = 0, seek_to, show_help = 0, map_size = MAP_SIZE;
+  u32 sync_interval_cnt = 0, show_help = 0, map_size = MAP_SIZE;
   u8 *extras_dir[4];
   u8  mem_limit_given = 0, exit_1 = 0, debug = 0,
      extras_dir_cnt = 0 /*, have_p = 0*/;
@@ -1296,7 +1296,7 @@ int main(int argc, char **argv_orig, char **envp) {
 
   show_init_stats(afl);
 
-  seek_to = find_start_position(afl);
+  // seek_to = find_start_position(afl);
 
   write_stats_file(afl, 0, 0, 0);
   maybe_update_plot_file(afl, 0, 0);
@@ -1318,28 +1318,23 @@ int main(int argc, char **argv_orig, char **envp) {
   // real start time, we reset, so this works correctly with -V
   afl->start_time = get_cur_time();
 
+  u32 runs_in_current_cycle = (u32)-1;
+
+  create_alias_table(afl);
+
   while (1) {
 
     u8 skipped_fuzz;
 
     cull_queue(afl);
 
-    if (!afl->queue_cur) {
+    if (runs_in_current_cycle > afl->queued_paths) {
 
       ++afl->queue_cycle;
+      runs_in_current_cycle = 0;
       afl->current_entry = 0;
       afl->cur_skipped_paths = 0;
       afl->queue_cur = afl->queue;
-
-      while (seek_to) {
-
-        ++afl->current_entry;
-        --seek_to;
-        afl->queue_cur = afl->queue_cur->next;
-
-      }
-
-      // show_stats(afl);
 
       if (unlikely(afl->not_on_tty)) {
 
@@ -1464,17 +1459,34 @@ int main(int argc, char **argv_orig, char **envp) {
 
     }
 
+    // select the next queue entry to fuzz
+    ++runs_in_current_cycle;
+    afl->current_entry = select_next_queue_entry(afl);
+    afl->queue_cur = afl->queue_buf[afl->current_entry];
+
+    // and fuzz it
+    u32 prev_active_paths = afl->active_paths;
     skipped_fuzz = fuzz_one(afl);
 
-    if (!skipped_fuzz && !afl->stop_soon && afl->sync_id) {
+    if (!skipped_fuzz) {
 
-      if (unlikely(afl->is_main_node)) {
+      if (prev_active_paths < afl->active_paths) create_alias_table(afl);
 
-        if (!(sync_interval_cnt++ % (SYNC_INTERVAL / 3))) { sync_fuzzers(afl); }
+      if (!afl->stop_soon && afl->sync_id) {
 
-      } else {
+        if (unlikely(afl->is_main_node)) {
 
-        if (!(sync_interval_cnt++ % SYNC_INTERVAL)) { sync_fuzzers(afl); }
+          if (!(sync_interval_cnt++ % (SYNC_INTERVAL / 3))) {
+
+            sync_fuzzers(afl);
+
+          }
+
+        } else {
+
+          if (!(sync_interval_cnt++ % SYNC_INTERVAL)) { sync_fuzzers(afl); }
+
+        }
 
       }
 
@@ -1483,9 +1495,6 @@ int main(int argc, char **argv_orig, char **envp) {
     if (!afl->stop_soon && exit_1) { afl->stop_soon = 2; }
 
     if (afl->stop_soon) { break; }
-
-    afl->queue_cur = afl->queue_cur->next;
-    ++afl->current_entry;
 
   }
 
