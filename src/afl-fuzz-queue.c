@@ -121,9 +121,13 @@ void create_alias_table(afl_state_t *afl) {
   }
 
   int prob = 0;
-  for (i = 0; i < n; i++)
+  fprintf(stderr, "Alias:");
+  for (i = 0; i < n; i++) {
+    fprintf(stderr, " [%u]=%u", i, afl->alias_table[i]);
     if (afl->alias_table[i] >= n)
       prob = i;
+  }
+  fprintf(stderr, "\n");
   
   if (prob) {
 
