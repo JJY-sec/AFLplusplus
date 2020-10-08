@@ -1319,6 +1319,7 @@ int main(int argc, char **argv_orig, char **envp) {
   afl->start_time = get_cur_time();
 
   u32 runs_in_current_cycle = (u32)-1;
+  u32 prev_queued_paths = 0;
 
   create_alias_table(afl);
 
@@ -1461,7 +1462,15 @@ int main(int argc, char **argv_orig, char **envp) {
 
     // select the next queue entry to fuzz
     ++runs_in_current_cycle;
+
     if (likely(afl->queued_paths > 1)) {
+
+    if (unlikely(prev_queued_paths < afl->queued_paths)) {
+
+      prev_queued_paths = afl->queued_paths;
+      create_alias_table(afl);
+
+    }
 
       afl->current_entry = select_next_queue_entry(afl);
 
@@ -1477,12 +1486,9 @@ int main(int argc, char **argv_orig, char **envp) {
     afl->queue_cur = afl->queue_buf[afl->current_entry];
 
     // and fuzz it
-    u32 prev_queued_paths = afl->queued_paths;
     skipped_fuzz = fuzz_one(afl);
 
     if (!skipped_fuzz) {
-
-      if (prev_queued_paths < afl->queued_paths) create_alias_table(afl);
 
       if (!afl->stop_soon && afl->sync_id) {
 
