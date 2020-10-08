@@ -121,6 +121,25 @@ void create_alias_table(afl_state_t *afl) {
 
   }
 
+  int prob = 0;
+  for (i = 0; i < n; i++)
+    if (afl->alias_table[i] >= n)
+      prob = i;
+  
+  if (prob) {
+
+    fprintf(stderr, "PROBLEM! alias[%u] = %u\n", prob, afl->alias_table[prob]);  
+
+    for (i = 0; i < n; i++) {
+
+      struct queue_entry *q = afl->queue_buf[i];
+
+      fprintf(stderr, "%u: score=%f\n", i, q->perf_score);
+
+    }
+
+  }
+
 }
 
 /* Mark deterministic checks as done for a particular queue entry. We use the
