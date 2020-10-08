@@ -1471,7 +1471,7 @@ int main(int argc, char **argv_orig, char **envp) {
 
     }
 
-    if (debug)
+//    if (debug)
       fprintf(stderr, "Selected entry %u of %u\n", afl->current_entry,
               afl->queued_paths);
     afl->queue_cur = afl->queue_buf[afl->current_entry];
