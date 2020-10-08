@@ -1465,12 +1465,12 @@ int main(int argc, char **argv_orig, char **envp) {
 
     if (likely(afl->queued_paths > 1)) {
 
-    if (unlikely(prev_queued_paths < afl->queued_paths)) {
+      if (unlikely(prev_queued_paths < afl->queued_paths)) {
 
-      prev_queued_paths = afl->queued_paths;
-      create_alias_table(afl);
+        prev_queued_paths = afl->queued_paths;
+        create_alias_table(afl);
 
-    }
+      }
 
       afl->current_entry = select_next_queue_entry(afl);
 
@@ -1480,9 +1480,11 @@ int main(int argc, char **argv_orig, char **envp) {
 
     }
 
-//    if (debug)
-      fprintf(stderr, "Selected entry %u of %u\n", afl->current_entry,
-              afl->queued_paths);
+    /*
+        if (debug)
+          fprintf(stderr, "Selected entry %u of %u\n", afl->current_entry,
+                  afl->queued_paths);
+    */
     afl->queue_cur = afl->queue_buf[afl->current_entry];
 
     // and fuzz it
