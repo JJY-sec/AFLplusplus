@@ -31,8 +31,7 @@ inline u32 select_next_queue_entry(afl_state_t *afl) {
 
   u32 r = rand_below(afl, 0xffffffff);
   u32 s = r % afl->queued_paths;
-  // fprintf(stderr, "select: r=%u s=%u ... r < prob[s] = %f ? s=%u :
-  // alias[s]=%u\n", r, s, afl->alias_probability[s], s, afl->alias_table[s]);
+  fprintf(stderr, "select: r=%u s=%u ... r < prob[s]=%f ? s=%u : alias[%u]=%u\n", r, s, afl->alias_probability[s], s, s, afl->alias_table[s]);
   return (r < afl->alias_probability[s] ? s : afl->alias_table[s]);
 
 }
