@@ -960,6 +960,7 @@ void perform_dry_run(afl_state_t *afl) {
 
         struct queue_entry *p = afl->queue;
         p->disabled = 1;
+        p->perf_score = 0;
         while (p && p->next != q)
           p = p->next;
 
@@ -1067,12 +1068,14 @@ restart_outer_cull_loop:
         if (p->len >= q->len) {
 
           p->disabled = 1;
+          p->perf_score = 0;
           q->next = p->next;
           goto restart_inner_cull_loop;
 
         } else {
 
           q->disabled = 1;
+          q->perf_score = 0;
           if (prev)
             prev->next = q = p;
           else
