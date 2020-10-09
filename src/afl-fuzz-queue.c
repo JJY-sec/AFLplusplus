@@ -51,13 +51,8 @@ void create_alias_table(afl_state_t *afl) {
   int *   L = (u32 *)afl_realloc(AFL_BUF_PARAM(in_scratch), n * sizeof(u32));
 
   if (!P || !S || !L) FATAL("could not aquire memory for alias table");
-  /*
-  memset((void *)P, 0, n * sizeof(double));
-  memset((void *)S, 0, n * sizeof(u32));
-  memset((void *)L, 0, n * sizeof(u32));
   memset((void *)afl->alias_table, 0, n * sizeof(u32));
   memset((void *)afl->alias_probability, 0, n * sizeof(double));
-  */
 
   double sum = 0;
 
